@@ -11,6 +11,11 @@ RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > 
 
 RUN echo "alias ll='ls -l'" >> /root/.bashrc && \
     echo "alias ll='ls -l'" >> /home/app/.bashrc
+
+RUN echo "alias ls='ls --color=auto'" >> /root/.bashrc && \
+    echo "alias ll='ls -l --color=auto'" >> /root/.bashrc && \
+    echo "alias ls='ls --color=auto'" >> /home/app/.bashrc && \
+    echo "alias ll='ls -l --color=auto'" >> /home/app/.bashrc
 ##########################################
 
 # Added --allow-unauthenticated to force bypass of expired historical archive keys
