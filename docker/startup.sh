@@ -2,6 +2,7 @@
 set -e
 
 LOGFILE=/home/app/webapp/log/startup.log
+mkdir -p /home/app/webapp/log # Ensure log directory exists for the very first echo
 echo "[$(date)] Starting startup.sh" >> $LOGFILE
 
 # -------- Nginx Virtual Host Config  --------
@@ -17,17 +18,27 @@ echo "[$(date)] Nginx configuration done" >> $LOGFILE
 #####
 
 # -------- Environment Setup --------
-export DYNO="php-test-${DUPLO_DOCKER_HOST:-$(cat /host_ip)}-$REPLICA_ID"
+# FIX: Ensure the utilities directory exists so file writes don't crash the container
+mkdir -p /home/app/utils
+chown app:app /home/app/utils || true
+
+export DYNO="php-test-${DUPLO_DOCKER_HOST:-$(cat /host_ip 2>/dev/null || echo "local_host")}-$REPLICA_ID"
 gcpfoldername=${SERVER_FOLDER_NAME:-php-test}
-#echo "${HOSTNAME}-${REPLICA_ID}" > /home/app/utils/servername
-#echo $gcpfoldername > /home/app/utils/gcpfoldername
 
-#source /home/app/utils/uniqgcp.sh
+# Kept safely commented out as per your layout, but will not crash if uncommented now
+# echo "${HOSTNAME}-${REPLICA_ID}" > /home/app/utils/servername
+# echo $gcpfoldername > /home/app/utils/gcpfoldername
 
-#echo "[$(date)] Copying common_util.rake" >> $LOGFILE
-#cp /home/app/utils/common_util.rake /home/app/webapp/lib/tasks/common_util.rake
-#chown app:app /home/app/webapp/lib/tasks/common_util.rake
-#chown app:app /home/app/utils/gcpfoldername || true
+if [ -f /home/app/utils/uniqgcp.sh ]; then
+  source /home/app/utils/uniqgcp.sh
+fi
+
+if [ -f /home/app/utils/common_util.rake ]; then
+  echo "[$(date)] Copying common_util.rake" >> $LOGFILE
+  cp /home/app/utils/common_util.rake /home/app/webapp/lib/tasks/common_util.rake
+  chown app:app /home/app/webapp/lib/tasks/common_util.rake
+fi
+chown app:app /home/app/utils/gcpfoldername || true
 #####
 
 # -------- Cron Setup --------
@@ -55,7 +66,6 @@ echo "[$(date)] Removed GCP key if existed" >> $LOGFILE
 
 # -------- PHP-FPM Service Startup --------
 echo "[$(date)] Starting PHP-FPM background engine" >> $LOGFILE
-# Dynamically locates the running initialization script for php5.6-fpm or generic pools
 service $(ls /etc/init.d/ | grep php) start >> $LOGFILE 2>&1 || service php-fpm start >> $LOGFILE 2>&1 || true
 
 # -------- Startup Container --------
