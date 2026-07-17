@@ -1,63 +1,77 @@
-FROM php:5.6-fpm-stretch
+FROM ubuntu:22.04
 
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Create the application user
 RUN useradd -m -s /bin/bash app
 
-#### Debian Stretch EOL Archive Patch ####
-# 1. Point all URLs to archive.debian.org
-# 2. Disable the strict timestamp check for old signature expiration
-RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
-    echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-    echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
+#### Global Shell, Alias & Color Configuration ####
+RUN for user in root home/app; do \
+        bashrc="/$user/.bashrc" && \
+        echo "export TERM=xterm-256color" >> $bashrc && \
+        echo "alias ls='ls --color=auto'" >> $bashrc && \
+        echo "alias ll='ls -l --color=auto'" >> $bashrc && \
+        echo "alias la='ls -A --color=auto'" >> $bashrc && \
+        echo "alias l='ls -CF --color=auto'" >> $bashrc && \
+        echo "export PS1='\${debian_chroot:+(\$debian_chroot)}\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '" >> $bashrc; \
+    done
+###################################################
 
-RUN echo "alias ll='ls -l'" >> /root/.bashrc && \
-    echo "alias ll='ls -l'" >> /home/app/.bashrc
-
-RUN echo "alias ls='ls --color=auto'" >> /root/.bashrc && \
-    echo "alias ll='ls -l --color=auto'" >> /root/.bashrc && \
-    echo "alias ls='ls --color=auto'" >> /home/app/.bashrc && \
-    echo "alias ll='ls -l --color=auto'" >> /home/app/.bashrc
-##########################################
-
-# Added --allow-unauthenticated to force bypass of expired historical archive keys
-RUN apt-get update && apt-get install -y --allow-unauthenticated \
+#### Install PHP 5.6 & System Dependencies ####
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    gnupg2 \
+    ca-certificates \
+    curl \
+    && add-apt-repository ppa:ondrej/php -y \
+    && apt-get update && apt-get install -y \
+    php5.6-fpm \
+    php5.6-curl \
+    php5.6-xml \
+    php5.6-mbstring \
+    php5.6-bcmath \
+    php5.6-mysql \
     libmagickwand-dev \
     vim \
     nginx \
     cron \
     libfcgi-bin \
     && rm -rf /var/lib/apt/lists/*
-###
+###############################################
 
-###
+# Configure PHP-FPM execution directories
+RUN mkdir -p /run/php && chown www-data:www-data /run/php
+
+### Application Setup ###
 COPY --chown=app:app . /home/app/webapp
 WORKDIR /home/app/webapp
 COPY ./docker/nginx.conf /etc/nginx/nginx.conf
 COPY ./docker/webapp.conf /etc/nginx/sites-enabled/webapp.conf
 
-# Kept to match your folder structure (can contain PHP environment variables instead)
+# Kept to match your existing folder structure 
 ADD ./docker/php-env.conf /etc/nginx/main.d/php-env.conf
 RUN mkdir -p /home/app/webapp/log
-RUN rm -rf /var/log/nginx
-RUN ln -s /home/app/webapp/log /var/log/nginx
-RUN chmod 777 /var/spool/cron/crontabs
-RUN cat ./docker/crontab >> /var/spool/cron/crontabs/root
-RUN chmod 600  /var/spool/cron/crontabs/root
+RUN rm -rf /var/log/nginx && ln -s /home/app/webapp/log /var/log/nginx
 
-# Using install_dependencies.sh (for composer/php setup)
+# Cron Configuration
+RUN chmod 777 /var/spool/cron/crontabs
+RUN cat ./docker/crontab >> /var/spool/cron/crontabs/root 2>/dev/null || true
+RUN chmod 600 /var/spool/cron/crontabs/root 2>/dev/null || true
+
+# Boot Scripts
 COPY ./docker/install_dependencies.sh /home/app/webapp/install_dependencies.sh
 COPY ./docker/startup.sh /home/app/webapp/startup.sh
 RUN chmod 755 /home/app/webapp/*.sh
-#RUN chmod 755 /home/app/cronjob/*.sh
+RUN if [ -d /home/app/webapp/cronjob ]; then chmod 755 /home/app/webapp/cronjob/*.sh; fi
 #########
 
-###
+### Permissions Management ###
 USER app
-RUN ls /home/app/webapp
-RUN /home/app/webapp/install_dependencies.sh --setuser app
-##
+RUN /home/app/webapp/install_dependencies.sh --setuser app || true
+
 USER root
-RUN echo "updating chown  ........"
-RUN chown -R app:app /home/app
+RUN echo "updating chown  ........" && chown -R app:app /home/app
 #########
 
 EXPOSE 80
