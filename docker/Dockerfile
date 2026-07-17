@@ -6,60 +6,53 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Create the application user
 RUN useradd -m -s /bin/bash app
 
-
-#### Install PHP 5.6 & System Dependencies ####
+#### Install Python 3.8 & System Dependencies ####
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     gnupg2 \
     ca-certificates \
     curl \
-    && add-apt-repository ppa:ondrej/php -y \
+    build-essential \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
     && apt-get update && apt-get install -y \
-    php5.6-fpm \
-    php5.6-curl \
-    php5.6-xml \
-    php5.6-mbstring \
-    php5.6-bcmath \
-    php5.6-mysql \
-    libmagickwand-dev \
+    python3.8 \
+    python3.8-dev \
+    python3.8-distutils \
     vim \
     nginx \
     cron \
-    libfcgi-bin \
     && rm -rf /var/lib/apt/lists/*
 ###############################################
-
-# Configure PHP-FPM execution directories
-RUN mkdir -p /run/php && chown www-data:www-data /run/php
 
 ### Application Setup ###
 COPY --chown=app:app . /home/app/webapp
 WORKDIR /home/app/webapp
+
+# Nginx Routing Infrastructure Setup
 COPY ./docker/nginx.conf /etc/nginx/nginx.conf
 COPY ./docker/webapp.conf /etc/nginx/sites-enabled/webapp.conf
+RUN rm -f /etc/nginx/sites-enabled/default
 
-# Kept to match your existing folder structure 
-ADD ./docker/php-env.conf /etc/nginx/main.d/php-env.conf
+# App Layout & Logs Synchronization
 RUN mkdir -p /home/app/webapp/log
 RUN rm -rf /var/log/nginx && ln -s /home/app/webapp/log /var/log/nginx
 
-# Cron Configuration
+# Cron Configurations 
 RUN chmod 777 /var/spool/cron/crontabs
 RUN cat ./docker/crontab >> /var/spool/cron/crontabs/root 2>/dev/null || true
 RUN chmod 600 /var/spool/cron/crontabs/root 2>/dev/null || true
 
-# Boot Scripts
+# Boot Scripts Setup
 COPY ./docker/install_dependencies.sh /home/app/webapp/install_dependencies.sh
 COPY ./docker/startup.sh /home/app/webapp/startup.sh
 RUN chmod 755 /home/app/webapp/*.sh
-RUN if [ -d /home/app/webapp/cronjob ]; then chmod 755 /home/app/webapp/cronjob/*.sh; fi
+RUN chmod 755 /home/app/webapp/cronjob/*.sh 2>/dev/null || true
 #########
 
-### Permissions Management ###
-USER app
+### Global System Dependencies Control ###
+USER root
 RUN /home/app/webapp/install_dependencies.sh --setuser app || true
 
-USER root
 RUN echo "updating chown  ........" && chown -R app:app /home/app
 #########
 
