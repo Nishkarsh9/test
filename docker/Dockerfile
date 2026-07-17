@@ -8,6 +8,9 @@ RUN useradd -m -s /bin/bash app
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
     echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
     echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
+
+RUN echo "alias ll='ls -l'" >> /root/.bashrc && \
+    echo "alias ll='ls -l'" >> /home/app/.bashrc
 ##########################################
 
 # Added --allow-unauthenticated to force bypass of expired historical archive keys
