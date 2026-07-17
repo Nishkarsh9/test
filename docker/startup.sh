@@ -68,6 +68,10 @@ echo "[$(date)] Starting PHP-FPM background engine" >> $LOGFILE
 service $(ls /etc/init.d/ | grep php) start >> $LOGFILE 2>&1 || service php-fpm start >> $LOGFILE 2>&1 || true
 
 # -------- Startup Nginx Server --------
+echo "[$(date)] Removing stock Nginx default configuration if present" >> $LOGFILE
+# Clear the stock symlink to allow webapp.conf to take priority
+rm -f /etc/nginx/sites-enabled/default
+
 echo "[$(date)] startup.sh completed, launching Nginx foreground process" >> $LOGFILE
 
 # FIX: Replaced non-existent /sbin/my_init with Nginx. 
