@@ -6,17 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Create the application user
 RUN useradd -m -s /bin/bash app
 
-#### Global Shell, Alias & Color Configuration ####
-RUN for user in root home/app; do \
-        bashrc="/$user/.bashrc" && \
-        echo "export TERM=xterm-256color" >> $bashrc && \
-        echo "alias ls='ls --color=auto'" >> $bashrc && \
-        echo "alias ll='ls -l --color=auto'" >> $bashrc && \
-        echo "alias la='ls -A --color=auto'" >> $bashrc && \
-        echo "alias l='ls -CF --color=auto'" >> $bashrc && \
-        echo "export PS1='\${debian_chroot:+(\$debian_chroot)}\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '" >> $bashrc; \
-    done
-###################################################
 
 #### Install PHP 5.6 & System Dependencies ####
 RUN apt-get update && apt-get install -y \
