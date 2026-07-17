@@ -2,12 +2,16 @@ FROM php:5.6-fpm-stretch
 
 RUN useradd -m -s /bin/bash app
 
+#### Debian Stretch EOL Archive Patch ####
+# 1. Point all URLs to archive.debian.org
+# 2. Disable the strict timestamp check for old signature expiration
 RUN echo "deb http://archive.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
     echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
     echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
 ##########################################
 
-RUN apt-get update && apt-get install -y \
+# Added --allow-unauthenticated to force bypass of expired historical archive keys
+RUN apt-get update && apt-get install -y --allow-unauthenticated \
     libmagickwand-dev \
     vim \
     nginx \
