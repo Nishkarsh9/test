@@ -18,16 +18,11 @@ echo "[$(date)] Nginx configuration done" >> $LOGFILE
 #####
 
 # -------- Environment Setup --------
-# FIX: Ensure the utilities directory exists so file writes don't crash the container
 mkdir -p /home/app/utils
 chown app:app /home/app/utils || true
 
 export DYNO="php-test-${DUPLO_DOCKER_HOST:-$(cat /host_ip 2>/dev/null || echo "local_host")}-$REPLICA_ID"
 gcpfoldername=${SERVER_FOLDER_NAME:-php-test}
-
-# Kept safely commented out as per your layout, but will not crash if uncommented now
-# echo "${HOSTNAME}-${REPLICA_ID}" > /home/app/utils/servername
-# echo $gcpfoldername > /home/app/utils/gcpfoldername
 
 if [ -f /home/app/utils/uniqgcp.sh ]; then
   source /home/app/utils/uniqgcp.sh
@@ -38,7 +33,11 @@ if [ -f /home/app/utils/common_util.rake ]; then
   cp /home/app/utils/common_util.rake /home/app/webapp/lib/tasks/common_util.rake
   chown app:app /home/app/webapp/lib/tasks/common_util.rake
 fi
-chown app:app /home/app/utils/gcpfoldername || true
+
+# FIX: Added an existence check before changing ownership so it never throws an error
+if [ -f /home/app/utils/gcpfoldername ]; then
+  chown app:app /home/app/utils/gcpfoldername || true
+fi
 #####
 
 # -------- Cron Setup --------
@@ -48,10 +47,10 @@ if [ -f /var/spool/cron/crontabs/root ]; then
 fi
 chown app:app /var/spool/cron/crontabs/app || true
 chown -R app:app /home/app/webapp/log || true
-echo "[$(date)] Current crontab:" >> $LOGFILE
-crontab -l >> $LOGFILE || true
-service cron status >> $LOGFILE || true
 
+# Start the cron background service
+service cron start || true
+echo "[$(date)] Cron started successfully" >> $LOGFILE
 
 # -------- Log Directories --------
 echo "[$(date)] Creating log directories" >> $LOGFILE
@@ -68,9 +67,9 @@ echo "[$(date)] Removed GCP key if existed" >> $LOGFILE
 echo "[$(date)] Starting PHP-FPM background engine" >> $LOGFILE
 service $(ls /etc/init.d/ | grep php) start >> $LOGFILE 2>&1 || service php-fpm start >> $LOGFILE 2>&1 || true
 
-# -------- Startup Container --------
-echo "[$(date)] Stopping cron before init" >> $LOGFILE
-service cron stop || true
+# -------- Startup Nginx Server --------
+echo "[$(date)] startup.sh completed, launching Nginx foreground process" >> $LOGFILE
 
-echo "[$(date)] startup.sh completed, launching my_init" >> $LOGFILE
-exec /sbin/my_init
+# FIX: Replaced non-existent /sbin/my_init with Nginx. 
+# Since 'daemon off;' is configured, Nginx will stay in the foreground and keep the container alive.
+exec nginx
