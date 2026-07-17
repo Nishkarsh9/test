@@ -19,15 +19,15 @@ echo "[$(date)] Nginx configuration done" >> $LOGFILE
 # -------- Environment Setup --------
 export DYNO="php-test-${DUPLO_DOCKER_HOST:-$(cat /host_ip)}-$REPLICA_ID"
 gcpfoldername=${SERVER_FOLDER_NAME:-php-test}
-echo "${HOSTNAME}-${REPLICA_ID}" > /home/app/utils/servername
+#echo "${HOSTNAME}-${REPLICA_ID}" > /home/app/utils/servername
 #echo $gcpfoldername > /home/app/utils/gcpfoldername
 
-source /home/app/utils/uniqgcp.sh
+#source /home/app/utils/uniqgcp.sh
 
-echo "[$(date)] Copying common_util.rake" >> $LOGFILE
-cp /home/app/utils/common_util.rake /home/app/webapp/lib/tasks/common_util.rake
-chown app:app /home/app/webapp/lib/tasks/common_util.rake
-chown app:app /home/app/utils/gcpfoldername || true
+#echo "[$(date)] Copying common_util.rake" >> $LOGFILE
+#cp /home/app/utils/common_util.rake /home/app/webapp/lib/tasks/common_util.rake
+#chown app:app /home/app/webapp/lib/tasks/common_util.rake
+#chown app:app /home/app/utils/gcpfoldername || true
 #####
 
 # -------- Cron Setup --------
