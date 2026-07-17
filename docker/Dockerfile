@@ -39,7 +39,7 @@ RUN chmod 600  /var/spool/cron/crontabs/root
 COPY ./docker/install_dependencies.sh /home/app/webapp/install_dependencies.sh
 COPY ./docker/startup.sh /home/app/webapp/startup.sh
 RUN chmod 755 /home/app/webapp/*.sh
-RUN chmod 755 /home/app/cronjob/*.sh
+#RUN chmod 755 /home/app/cronjob/*.sh
 #########
 
 ###
