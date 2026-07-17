@@ -24,6 +24,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 ###############################################
 
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 2 && \
+    update-alternatives --set python3 /usr/bin/python3.8
+
 ### Application Setup ###
 COPY --chown=app:app . /home/app/webapp
 WORKDIR /home/app/webapp
